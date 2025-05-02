@@ -12,7 +12,11 @@ import {
 import {
   DatabaseFilter,
   DatabaseSort,
+  NotionProp,
   PageProperties,
+  PropertyResult,
+  RawValues,
+  SelectOption,
 } from "../types/notion.types";
 import { redis } from "../lib/redis";
 
@@ -31,27 +35,17 @@ class NotionService {
     }
   }
 
-  async createPage(
+  async addPage(
     databaseId: string,
-    properties: PageProperties
+    propsMeta: PropertyResult,
+    rawValues: RawValues
   ): Promise<CreatePageResponse> {
-    try {
-      if (!properties["Name"]) {
-        throw new Error("Property 'Name' is required to create a page.");
-      }
+    const properties = this.transformToNotionProps(propsMeta, rawValues);
 
-      const response = await this.notion.pages.create({
-        parent: {
-          database_id: databaseId,
-        },
-        properties,
-      });
-
-      return response;
-    } catch (error) {
-      console.error("Error creating page in Notion:", error);
-      throw error;
-    }
+    return await this.notion.pages.create({
+      parent: { database_id: databaseId },
+      properties,
+    });
   }
 
   async queryDatabase(
@@ -249,6 +243,56 @@ class NotionService {
     }
 
     return await this.notion.databases.create(base);
+  }
+
+  private transformToNotionProps(
+    propsMeta: PropertyResult,
+    values: RawValues
+  ): PageProperties {
+    const out: PageProperties = {};
+
+    for (const [key, raw] of Object.entries(values)) {
+      const meta = propsMeta[key] as NotionProp;
+      if (!meta) continue;
+
+      switch (meta.type) {
+        case "title":
+          out[key] = { title: [{ text: { content: raw as string } }] };
+          break;
+
+        case "rich_text":
+          out[key] = { rich_text: [{ text: { content: raw as string } }] };
+          break;
+
+        case "number":
+          out[key] = { number: Number(raw) };
+          break;
+
+        case "date":
+          out[key] = { date: { start: raw as string } };
+          break;
+
+        case "select": {
+          const opts = (meta.config as { options: SelectOption[] }).options;
+          const picked = opts.find((o) => o.id === (raw as string));
+          out[key] = { select: { name: picked?.name ?? "" } };
+          break;
+        }
+
+        case "multi_select": {
+          const opts = (meta.config as { options: SelectOption[] }).options;
+          const ids = Array.isArray(raw) ? raw : [raw];
+          const picks = ids
+            .map((id) => opts.find((o) => o.id === id))
+            .filter((o): o is SelectOption => !!o)
+            .map((o) => ({ name: o.name }));
+          out[key] = { multi_select: picks };
+          break;
+        }
+      }
+    }
+
+    return out;
   }
 }
 

@@ -52,6 +52,27 @@ export type NotionPropertySchema = {
 
 export type PropertyResult = Record<string, NotionPropertySchema>;
 
+export type NotionProp = {
+  type: string;
+  name: string;
+  config: Record<string, unknown>;
+};
+
+export type RawValues = Record<string, string | string[]>;
+
+export type NotionSessionFlow = {
+  url?: string;
+  title?: string;
+  type?: string;
+  pageId?: string;
+  databaseName?: string;
+  databaseId?: string;
+  props?: PropertyResult;
+  remainingProps?: PropertyResult;
+  values?: RawValues;
+  currentProperty?: string;
+};
+
 export interface DatabaseSort {
   property: string;
   direction: "ascending" | "descending";

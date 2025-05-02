@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { TelegramController } from "../controllers/telegram.controller";
+import TelegramController from "../controllers/telegram.controller";
 
 const router = Router();
 
-router.post("/", TelegramController.handleWebhook);
+const telegramController = new TelegramController();
+
+router.post("/", telegramController.handleWebhook.bind(telegramController));
 
 export default router;

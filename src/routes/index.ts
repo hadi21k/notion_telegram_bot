@@ -4,7 +4,10 @@ import { Router } from "express";
 
 const router = Router();
 
-router.use("/telegram", telegramRoutes);
+const botToken = process.env.TELEGRAM_BOT_TOKEN as string;
+const webhookPath = `/bot${botToken}`;
+
+router.use(webhookPath, telegramRoutes);
 
 router.use("/connected-accounts", connectedAccountsRoutes);
 

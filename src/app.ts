@@ -5,9 +5,6 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import https from "https";
 import fs from "fs";
-import TelegramBot from "node-telegram-bot-api";
-import { TelegramController } from "./controllers/telegram.controller";
-import telegramRoutes from "./routes/telegram.routes";
 import routes from "./routes";
 
 dotenv.config();
@@ -20,8 +17,6 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const PORT = process.env.PORT || 3000;
-
 const server = https.createServer(
   {
     key: fs.readFileSync("./key.pem", "utf8"),
@@ -29,22 +24,6 @@ const server = https.createServer(
   },
   app
 );
-
-const botToken = process.env.TELEGRAM_BOT_TOKEN as string;
-// const webhookSecret = process.env.WEBHOOK_SECRET as string;
-const webhookPath = `/bot${botToken}`;
-
-const options: TelegramBot.ConstructorOptions = {
-  webHook: {
-    port: Number(PORT),
-  },
-};
-
-const bot = new TelegramBot(botToken, options);
-
-TelegramController.initialize(bot);
-
-app.use(webhookPath, telegramRoutes);
 
 app.use("/api", routes);
 

@@ -1,18 +1,15 @@
 import prisma from "../lib/prisma";
 import { redis } from "../lib/redis";
 import { User } from "@prisma/client";
+import { encryptionService } from "./encryption.service";
+import { NotionSessionFlow } from "@/types/notion.types";
 
 export interface UserSession {
+  userId: string;
   step: number;
-  command: "/start" | "/connect" | "/page" | "/addurl";
+  command: "/start" | "/connect" | "/page" | "/addurl" | "/resources";
   name: string;
-  data: {
-    url?: string;
-    title?: string;
-    type?: string;
-    pageId?: string;
-    databaseName?: string;
-  };
+  data: NotionSessionFlow;
 }
 
 class UserService {
@@ -44,6 +41,25 @@ class UserService {
       },
     });
     return user;
+  }
+
+  static async getUserAccessToken(
+    provider: string,
+    userId: string
+  ): Promise<string | null> {
+    const token = await prisma.token.findUnique({
+      where: {
+        userId_provider: { userId, provider },
+      },
+    });
+
+    if (!token?.accessToken) {
+      return null;
+    }
+
+    const decryptedToken = encryptionService.decrypt(token.accessToken);
+
+    return decryptedToken;
   }
 }
 
